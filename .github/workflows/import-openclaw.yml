@@ -58,7 +58,7 @@ jobs:
       run: |
         sudo apt-get install -y moreutils ripgrep
 
-        - name: Run rename script
+    - name: Run rename script
       run: |
         cd core/
         # Rename file contents
@@ -86,7 +86,6 @@ jobs:
         done
 
         echo "Rename complete"
-
 
     - name: Update root package.json to reference core/
       run: |
