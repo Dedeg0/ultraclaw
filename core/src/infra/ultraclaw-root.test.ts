@@ -141,6 +141,19 @@ describe("resolveUltraClawPackageRoot", () => {
     expect(resolveUltraClawPackageRootSync({ moduleUrl })).toBe(pkgRoot);
   });
 
+  it("falls through from a non-ultraclaw moduleUrl candidate to cwd", async () => {
+    const wrongPkgRoot = fx("moduleurl-fallthrough", "wrong");
+    const cwdPkgRoot = fx("moduleurl-fallthrough", "cwd");
+    setFile(path.join(wrongPkgRoot, "package.json"), JSON.stringify({ name: "not-ultraclaw" }));
+    setFile(path.join(cwdPkgRoot, "package.json"), JSON.stringify({ name: "ultraclaw" }));
+    const moduleUrl = pathToFileURL(path.join(wrongPkgRoot, "dist", "index.js")).toString();
+
+    expect(resolveUltraClawPackageRootSync({ moduleUrl, cwd: cwdPkgRoot })).toBe(cwdPkgRoot);
+    await expect(resolveUltraClawPackageRoot({ moduleUrl, cwd: cwdPkgRoot })).resolves.toBe(
+      cwdPkgRoot,
+    );
+  });
+
   it("ignores invalid moduleUrl values and falls back to cwd", async () => {
     const pkgRoot = fx("invalid-moduleurl");
     setFile(path.join(pkgRoot, "package.json"), JSON.stringify({ name: "ultraclaw" }));
@@ -158,6 +171,16 @@ describe("resolveUltraClawPackageRoot", () => {
     setFile(path.join(pkgRoot, "package.json"), JSON.stringify({ name: "not-ultraclaw" }));
 
     expect(resolveUltraClawPackageRootSync({ cwd: pkgRoot })).toBeNull();
+  });
+
+  it("falls back from a symlinked argv1 to the node_modules package root", () => {
+    const project = fx("symlink-node-modules-fallback");
+    const argv1 = path.join(project, "node_modules", ".bin", "ultraclaw");
+    state.realpaths.set(abs(argv1), abs(path.join(project, "versions", "current", "ultraclaw.mjs")));
+    const pkgRoot = path.join(project, "node_modules", "ultraclaw");
+    setFile(path.join(pkgRoot, "package.json"), JSON.stringify({ name: "ultraclaw" }));
+
+    expect(resolveUltraClawPackageRootSync({ argv1 })).toBe(pkgRoot);
   });
 
   it("async resolver matches sync behavior", async () => {

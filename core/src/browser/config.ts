@@ -46,7 +46,7 @@ export type ResolvedBrowserProfile = {
   cdpHost: string;
   cdpIsLoopback: boolean;
   color: string;
-  driver: "ultraclaw" | "extension";
+  driver: "ultraclaw" | "extension" | "existing-session";
   attachOnly: boolean;
 };
 
@@ -335,7 +335,12 @@ export function resolveProfile(
   let cdpHost = resolved.cdpHost;
   let cdpPort = profile.cdpPort ?? 0;
   let cdpUrl = "";
-  const driver = profile.driver === "extension" ? "extension" : "ultraclaw";
+  const driver =
+    profile.driver === "extension"
+      ? "extension"
+      : profile.driver === "existing-session"
+        ? "existing-session"
+        : "ultraclaw";
 
   if (rawProfileUrl) {
     const parsed = parseHttpUrl(rawProfileUrl, `browser.profiles.${profileName}.cdpUrl`);
@@ -356,7 +361,7 @@ export function resolveProfile(
     cdpIsLoopback: isLoopbackHost(cdpHost),
     color: profile.color,
     driver,
-    attachOnly: profile.attachOnly ?? resolved.attachOnly,
+    attachOnly: driver === "existing-session" ? true : (profile.attachOnly ?? resolved.attachOnly),
   };
 }
 

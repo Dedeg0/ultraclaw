@@ -2,13 +2,47 @@ import { describe, expect, it } from "vitest";
 import { matchesExecAllowlistPattern } from "./exec-allowlist-pattern.js";
 
 describe("matchesExecAllowlistPattern", () => {
+  it.each([
+    { pattern: "", target: "/tmp/tool", expected: false },
+    { pattern: "   ", target: "/tmp/tool", expected: false },
+    { pattern: "/tmp/tool", target: "/tmp/tool", expected: true },
+  ])("handles literal patterns for %j", ({ pattern, target, expected }) => {
+    expect(matchesExecAllowlistPattern(pattern, target)).toBe(expected);
+  });
+
   it("does not let ? cross path separators", () => {
     expect(matchesExecAllowlistPattern("/tmp/a?b", "/tmp/a/b")).toBe(false);
     expect(matchesExecAllowlistPattern("/tmp/a?b", "/tmp/acb")).toBe(true);
   });
 
-  it("keeps ** matching across path separators", () => {
-    expect(matchesExecAllowlistPattern("/tmp/**/tool", "/tmp/a/b/tool")).toBe(true);
+  it.each([
+    { pattern: "/tmp/*/tool", target: "/tmp/a/tool", expected: true },
+    { pattern: "/tmp/*/tool", target: "/tmp/a/b/tool", expected: false },
+    { pattern: "/tmp/**/tool", target: "/tmp/a/b/tool", expected: true },
+  ])("handles star patterns for %j", ({ pattern, target, expected }) => {
+    expect(matchesExecAllowlistPattern(pattern, target)).toBe(expected);
+  });
+
+  it("expands home-prefix patterns", () => {
+    const prevUltraClawHome = process.env.ULTRACLAW_HOME;
+    const prevHome = process.env.HOME;
+    process.env.ULTRACLAW_HOME = "/srv/ultraclaw-home";
+    process.env.HOME = "/home/other";
+    try {
+      expect(matchesExecAllowlistPattern("~/bin/tool", "/srv/ultraclaw-home/bin/tool")).toBe(true);
+      expect(matchesExecAllowlistPattern("~/bin/tool", "/home/other/bin/tool")).toBe(false);
+    } finally {
+      if (prevUltraClawHome === undefined) {
+        delete process.env.ULTRACLAW_HOME;
+      } else {
+        process.env.ULTRACLAW_HOME = prevUltraClawHome;
+      }
+      if (prevHome === undefined) {
+        delete process.env.HOME;
+      } else {
+        process.env.HOME = prevHome;
+      }
+    }
   });
 
   it.runIf(process.platform !== "win32")("preserves case sensitivity on POSIX", () => {

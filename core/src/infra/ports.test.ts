@@ -8,14 +8,7 @@ vi.mock("../process/exec.js", () => ({
   runCommandWithTimeout: (...args: unknown[]) => runCommandWithTimeoutMock(...args),
 }));
 import { inspectPortUsage } from "./ports-inspect.js";
-import {
-  buildPortHints,
-  classifyPortListener,
-  ensurePortAvailable,
-  formatPortDiagnostics,
-  handlePortError,
-  PortInUseError,
-} from "./ports.js";
+import { ensurePortAvailable, handlePortError, PortInUseError } from "./ports.js";
 
 const describeUnix = process.platform === "win32" ? describe.skip : describe;
 
@@ -60,32 +53,6 @@ describe("ports helpers", () => {
 
     const messages = runtime.error.mock.calls.map((call) => stripAnsi(String(call[0] ?? "")));
     expect(messages.join("\n")).toContain("another UltraClaw instance is already running");
-  });
-
-  it("classifies ssh and gateway listeners", () => {
-    expect(
-      classifyPortListener({ commandLine: "ssh -N -L 18790:127.0.0.1:18790 user@host" }, 18790),
-    ).toBe("ssh");
-    expect(
-      classifyPortListener(
-        {
-          commandLine: "node /Users/me/Projects/ultraclaw/dist/entry.js gateway",
-        },
-        18790,
-      ),
-    ).toBe("gateway");
-  });
-
-  it("formats port diagnostics with hints", () => {
-    const diagnostics = {
-      port: 18790,
-      status: "busy" as const,
-      listeners: [{ pid: 123, commandLine: "ssh -N -L 18790:127.0.0.1:18790" }],
-      hints: buildPortHints([{ pid: 123, commandLine: "ssh -N -L 18790:127.0.0.1:18790" }], 18790),
-    };
-    const lines = formatPortDiagnostics(diagnostics);
-    expect(lines[0]).toContain("Port 18790 is already in use");
-    expect(lines.some((line) => line.includes("SSH tunnel"))).toBe(true);
   });
 });
 

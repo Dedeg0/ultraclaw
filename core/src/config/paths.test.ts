@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { withTempDir } from "../test-helpers/temp-dir.js";
 import {
   resolveDefaultConfigCandidates,
   resolveConfigPathCandidate,
@@ -37,15 +37,6 @@ describe("oauth paths", () => {
 });
 
 describe("state + config path candidates", () => {
-  async function withTempRoot(prefix: string, run: (root: string) => Promise<void>): Promise<void> {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
-    try {
-      await run(root);
-    } finally {
-      await fs.rm(root, { recursive: true, force: true });
-    }
-  }
-
   function expectUltraClawHomeDefaults(env: NodeJS.ProcessEnv): void {
     const configuredHome = env.ULTRACLAW_HOME;
     if (!configuredHome) {
@@ -107,7 +98,7 @@ describe("state + config path candidates", () => {
   });
 
   it("prefers ~/.ultraclaw when it exists and legacy dir is missing", async () => {
-    await withTempRoot("ultraclaw-state-", async (root) => {
+    await withTempDir({ prefix: "ultraclaw-state-" }, async (root) => {
       const newDir = path.join(root, ".ultraclaw");
       await fs.mkdir(newDir, { recursive: true });
       const resolved = resolveStateDir({} as NodeJS.ProcessEnv, () => root);
@@ -116,7 +107,7 @@ describe("state + config path candidates", () => {
   });
 
   it("falls back to existing legacy state dir when ~/.ultraclaw is missing", async () => {
-    await withTempRoot("ultraclaw-state-legacy-", async (root) => {
+    await withTempDir({ prefix: "ultraclaw-state-legacy-" }, async (root) => {
       const legacyDir = path.join(root, ".clawdbot");
       await fs.mkdir(legacyDir, { recursive: true });
       const resolved = resolveStateDir({} as NodeJS.ProcessEnv, () => root);
@@ -125,7 +116,7 @@ describe("state + config path candidates", () => {
   });
 
   it("CONFIG_PATH prefers existing config when present", async () => {
-    await withTempRoot("ultraclaw-config-", async (root) => {
+    await withTempDir({ prefix: "ultraclaw-config-" }, async (root) => {
       const legacyDir = path.join(root, ".ultraclaw");
       await fs.mkdir(legacyDir, { recursive: true });
       const legacyPath = path.join(legacyDir, "ultraclaw.json");
@@ -137,7 +128,7 @@ describe("state + config path candidates", () => {
   });
 
   it("respects state dir overrides when config is missing", async () => {
-    await withTempRoot("ultraclaw-config-override-", async (root) => {
+    await withTempDir({ prefix: "ultraclaw-config-override-" }, async (root) => {
       const legacyDir = path.join(root, ".ultraclaw");
       await fs.mkdir(legacyDir, { recursive: true });
       const legacyConfig = path.join(legacyDir, "ultraclaw.json");
