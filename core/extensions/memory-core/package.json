@@ -1,0 +1,20 @@
+{
+  "name": "@ultraclaw/memory-core",
+  "version": "2026.3.13",
+  "private": true,
+  "description": "UltraClaw core memory search plugin",
+  "type": "module",
+  "peerDependencies": {
+    "ultraclaw": ">=2026.3.11"
+  },
+  "peerDependenciesMeta": {
+    "ultraclaw": {
+      "optional": true
+    }
+  },
+  "ultraclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

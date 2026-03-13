@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ultraclaw
+  labels:
+    app: ultraclaw
+spec:
+  type: ClusterIP
+  selector:
+    app: ultraclaw
+  ports:
+    - name: gateway
+      port: 18790
+      targetPort: 18790
+      protocol: TCP

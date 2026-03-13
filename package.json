@@ -1,0 +1,12 @@
+{
+  "name": "ultraclaw-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "UltraClaw OS - Personal AI assistant operating system",
+  "scripts": {
+    "install:core": "cd core && pnpm install",
+    "build": "cd core && pnpm build",
+    "dev": "cd core && pnpm gateway:watch",
+    "ultraclaw": "cd core && pnpm ultraclaw"
+  }
+}

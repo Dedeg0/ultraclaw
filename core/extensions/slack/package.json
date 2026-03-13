@@ -1,0 +1,12 @@
+{
+  "name": "@ultraclaw/slack",
+  "version": "2026.3.13",
+  "private": true,
+  "description": "UltraClaw Slack channel plugin",
+  "type": "module",
+  "ultraclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

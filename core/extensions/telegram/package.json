@@ -1,0 +1,12 @@
+{
+  "name": "@ultraclaw/telegram",
+  "version": "2026.3.13",
+  "private": true,
+  "description": "UltraClaw Telegram channel plugin",
+  "type": "module",
+  "ultraclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

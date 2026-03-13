@@ -1,0 +1,12 @@
+{
+  "name": "@ultraclaw/ollama-provider",
+  "version": "2026.3.13",
+  "private": true,
+  "description": "UltraClaw Ollama provider plugin",
+  "type": "module",
+  "ultraclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

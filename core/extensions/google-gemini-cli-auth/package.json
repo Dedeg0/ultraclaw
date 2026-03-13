@@ -1,0 +1,12 @@
+{
+  "name": "@ultraclaw/google-gemini-cli-auth",
+  "version": "2026.3.13",
+  "private": true,
+  "description": "UltraClaw Gemini CLI OAuth provider plugin",
+  "type": "module",
+  "ultraclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

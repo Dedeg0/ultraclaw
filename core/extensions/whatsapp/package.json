@@ -1,0 +1,12 @@
+{
+  "name": "@ultraclaw/whatsapp",
+  "version": "2026.3.13",
+  "private": true,
+  "description": "UltraClaw WhatsApp channel plugin",
+  "type": "module",
+  "ultraclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
