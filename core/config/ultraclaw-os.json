@@ -1,15 +1,1 @@
-{
-  "_comment": "UltraClaw OS default config. Copy to ~/.ultraclaw/ultraclaw.json",
-  "agent": {
-    "model": "ollama/llama3.2"
-  },
-  "gateway": {
-    "port": 18790,
-    "bind": "loopback"
-  },
-  "agents": {
-    "defaults": {
-      "workspace": "~/.ultraclaw/workspace"
-    }
-  }
-}
+{"agent":{"model":"ollama/llama3.2"},"gateway":{"port":18790,"bind":"loopback"}}
