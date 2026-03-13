@@ -1,0 +1,243 @@
+name: Add Ollama Default Support
+
+on:
+  workflow_dispatch:
+
+jobs:
+  add-ollama:
+    name: Configure Ollama as default LLM
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Configure git
+      run: |
+        git config user.name  "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Create UltraClaw OS source files
+      run: mkdir -p core/src/ultraclaw core/config
+
+    - name: Write os-defaults.ts
+      uses: DamianReeves/write-file-action@master
+      with:
+        path: core/src/ultraclaw/os-defaults.ts
+        contents: |
+          /**
+           * UltraClaw OS -- System Defaults
+           *
+           * Overrides standard UltraClaw config when running inside UltraClaw OS.
+           * Detected via ULTRACLAW_OS=1 environment variable.
+           *
+           * Model priority:
+           *   1. Ollama (local, no API key needed)
+           *   2. Anthropic (remote, requires ANTHROPIC_API_KEY)
+           *   3. OpenAI   (remote, requires OPENAI_API_KEY)
+           */
+
+          export const ULTRACLAW_OS = process.env['ULTRACLAW_OS'] === '1';
+
+          export const OS_DEFAULTS = {
+            gatewayPort: 18790,
+            configDir: '~/.ultraclaw',
+            dataDir: '/var/claw',
+            defaultModel: 'ollama/llama3.2',
+            modelFallbackChain: [
+              'ollama/llama3.2',
+              'anthropic/claude-haiku-4-5-20251001',
+              'openai/gpt-4o-mini',
+            ],
+            ollama: {
+              host: process.env['OLLAMA_HOST'] ?? 'http://127.0.0.1:11434',
+              defaultModel: process.env['OLLAMA_DEFAULT_MODEL'] ?? 'llama3.2',
+            },
+            product: {
+              name: 'UltraClaw OS',
+              version: process.env['ULTRACLAW_OS_VERSION'] ?? '0.1.0',
+              configName: 'ultraclaw',
+            },
+          } as const;
+
+          export function getOSAgentConfig(userConfig: Record<string, unknown> = {}) {
+            if (!ULTRACLAW_OS) return userConfig;
+            return {
+              agent: { model: OS_DEFAULTS.defaultModel, ...(userConfig['agent'] as object ?? {}) },
+              gateway: { port: OS_DEFAULTS.gatewayPort, ...(userConfig['gateway'] as object ?? {}) },
+              ...userConfig,
+            };
+          }
+
+    - name: Write ollama-provider.ts
+      uses: DamianReeves/write-file-action@master
+      with:
+        path: core/src/ultraclaw/ollama-provider.ts
+        contents: |
+          /**
+           * UltraClaw OS -- Ollama LLM Provider
+           *
+           * Direct integration with the local Ollama daemon.
+           * Supports streaming and non-streaming chat completions.
+           */
+
+          export interface OllamaModel {
+            name: string;
+            size: number;
+            digest: string;
+            modified_at: string;
+          }
+
+          export interface OllamaChatMessage {
+            role: 'system' | 'user' | 'assistant';
+            content: string;
+          }
+
+          export interface OllamaChatOptions {
+            temperature?: number;
+            top_p?: number;
+            num_ctx?: number;
+            stop?: string[];
+          }
+
+          export class OllamaProvider {
+            readonly host: string;
+
+            constructor(host = 'http://127.0.0.1:11434') {
+              this.host = host;
+            }
+
+            async isAvailable(): Promise<boolean> {
+              try {
+                const res = await fetch(`${this.host}/api/tags`, {
+                  signal: AbortSignal.timeout(2000),
+                });
+                return res.ok;
+              } catch {
+                return false;
+              }
+            }
+
+            async listModels(): Promise<OllamaModel[]> {
+              const res = await fetch(`${this.host}/api/tags`);
+              if (!res.ok) throw new Error(`Ollama list failed: ${res.status}`);
+              const data = await res.json() as { models: OllamaModel[] };
+              return data.models ?? [];
+            }
+
+            async hasModel(name: string): Promise<boolean> {
+              const models = await this.listModels();
+              return models.some(m => m.name === name || m.name.startsWith(`${name}:`));
+            }
+
+            async chat(
+              model: string,
+              messages: OllamaChatMessage[],
+              options: OllamaChatOptions = {}
+            ): Promise<string> {
+              const res = await fetch(`${this.host}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model, messages, stream: false, options }),
+              });
+              if (!res.ok) throw new Error(`Ollama chat failed: ${res.status}`);
+              const data = await res.json() as { message: OllamaChatMessage };
+              return data.message.content;
+            }
+
+            async *chatStream(
+              model: string,
+              messages: OllamaChatMessage[],
+              options: OllamaChatOptions = {}
+            ): AsyncGenerator<string> {
+              const res = await fetch(`${this.host}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model, messages, stream: true, options }),
+              });
+              if (!res.ok) throw new Error(`Ollama stream failed: ${res.status}`);
+
+              const reader = res.body!.getReader();
+              const decoder = new TextDecoder();
+
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                for (const line of decoder.decode(value).split('\n').filter(Boolean)) {
+                  try {
+                    const chunk = JSON.parse(line) as { message?: OllamaChatMessage };
+                    if (chunk.message?.content) yield chunk.message.content;
+                  } catch { /* skip malformed chunks */ }
+                }
+              }
+            }
+          }
+
+          export const ollama = new OllamaProvider(
+            process.env['OLLAMA_HOST'] ?? 'http://127.0.0.1:11434'
+          );
+
+    - name: Write index.ts
+      uses: DamianReeves/write-file-action@master
+      with:
+        path: core/src/ultraclaw/index.ts
+        contents: |
+          export { OllamaProvider, ollama } from './ollama-provider.js';
+          export { OS_DEFAULTS, ULTRACLAW_OS, getOSAgentConfig } from './os-defaults.js';
+
+    - name: Write env template
+      uses: DamianReeves/write-file-action@master
+      with:
+        path: core/.env.ultraclaw
+        contents: |
+          # UltraClaw OS -- Environment Configuration
+          # Copy to ~/.ultraclaw/.env and edit as needed
+
+          ULTRACLAW_OS=1
+          ULTRACLAW_OS_VERSION=0.1.0
+
+          OLLAMA_HOST=http://127.0.0.1:11434
+          OLLAMA_DEFAULT_MODEL=llama3.2
+
+          # ANTHROPIC_API_KEY=your_key_here
+          # OPENAI_API_KEY=your_key_here
+
+          ULTRACLAW_GATEWAY_PORT=18790
+
+    - name: Write OS config template
+      uses: DamianReeves/write-file-action@master
+      with:
+        path: core/config/ultraclaw-os.json
+        contents: |
+          {
+            "_comment": "UltraClaw OS default config. Copy to ~/.ultraclaw/ultraclaw.json",
+            "agent": {
+              "model": "ollama/llama3.2"
+            },
+            "gateway": {
+              "port": 18790,
+              "bind": "loopback"
+            },
+            "agents": {
+              "defaults": {
+                "workspace": "~/.ultraclaw/workspace"
+              }
+            }
+          }
+
+    - name: Commit changes
+      run: |
+        git add -A
+        git commit -m "feat: add Ollama as default LLM provider for UltraClaw OS
+
+        - OllamaProvider class with streaming chat support
+        - OS defaults: port 18790, config dir ~/.ultraclaw
+        - Model fallback chain: ollama -> anthropic -> openai
+        - .env.ultraclaw template
+        - config/ultraclaw-os.json template"
+        git push origin main
