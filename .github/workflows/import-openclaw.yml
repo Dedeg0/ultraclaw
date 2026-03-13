@@ -58,12 +58,35 @@ jobs:
       run: |
         sudo apt-get install -y moreutils ripgrep
 
-    - name: Run rename script
+        - name: Run rename script
       run: |
-        cp scripts/rename.sh /tmp/rename.sh
-        chmod +x /tmp/rename.sh
         cd core/
-        bash /tmp/rename.sh
+        # Rename file contents
+        find . \
+          -not -path '*/.git/*' \
+          -not -path '*/node_modules/*' \
+          -not -path '*/dist/*' \
+          -type f \
+          \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.mjs" \
+          -o -name "*.json" -o -name "*.md" -o -name "*.yaml" -o -name "*.yml" \
+          -o -name "*.sh" -o -name "*.html" -o -name "*.css" -o -name "*.env" \
+          -o -name "*.toml" -o -name "*.conf" \) \
+          -exec sed -i \
+            -e 's|openclaw\.ai|ultraclaw.os|g' \
+            -e 's|OpenClaw|UltraClaw|g' \
+            -e 's|openclaw|ultraclaw|g' \
+            -e 's|OPENCLAW|ULTRACLAW|g' \
+            -e 's|18789|18790|g' \
+            -e 's|~/\.openclaw|~/.ultraclaw|g' \
+          {} +
+
+        # Rename files and dirs containing "openclaw"
+        find . -not -path '*/.git/*' -depth -name "*openclaw*" | while read f; do
+          mv "$f" "${f//openclaw/ultraclaw}"
+        done
+
+        echo "Rename complete"
+
 
     - name: Update root package.json to reference core/
       run: |
