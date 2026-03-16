@@ -58,6 +58,7 @@ export function handleConnected(host: LifecycleHost) {
     connectGateway(host as unknown as Parameters<typeof connectGateway>[0]);
   });
   startNodesPolling(host as unknown as Parameters<typeof startNodesPolling>[0]);
+  void (host as unknown as { fetchOllamaStatus?: () => Promise<void> }).fetchOllamaStatus?.();
   if (host.tab === "logs") {
     startLogsPolling(host as unknown as Parameters<typeof startLogsPolling>[0]);
   }

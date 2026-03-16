@@ -126,6 +126,10 @@ export class UltraClawApp extends LitElement {
   @state() loginShowGatewayPassword = false;
   @state() tab: Tab = "chat";
   @state() onboarding = resolveOnboardingMode();
+  @state() ollamaStatus: import("./views/ollama-setup.ts").OllamaStatus | null = null;
+  @state() ollamaLogLines: string[] = [];
+  @state() ollamaInstalling = false;
+  @state() ollamaDismissed = false;
   @state() connected = false;
   @state() theme: ThemeName = this.settings.theme ?? "claw";
   @state() themeMode: ThemeMode = this.settings.themeMode ?? "system";
@@ -569,6 +573,23 @@ export class UltraClawApp extends LitElement {
 
   async loadOverview() {
     await loadOverviewInternal(this as unknown as Parameters<typeof loadOverviewInternal>[0]);
+  }
+
+  async fetchOllamaStatus() {
+    if (process.env.ULTRACLAW_OS !== "1") return;
+    try {
+      const res = await fetch("/api/ollama/status");
+      if (res.ok) this.ollamaStatus = await res.json();
+    } catch { /* ignore */ }
+  }
+
+  async triggerOllamaInstall() {
+    if (this.ollamaInstalling) return;
+    this.ollamaInstalling = true;
+    this.ollamaLogLines = [];
+    try {
+      await fetch("/api/ollama/install", { method: "POST" });
+    } catch { /* ignore */ }
   }
 
   async loadCron() {

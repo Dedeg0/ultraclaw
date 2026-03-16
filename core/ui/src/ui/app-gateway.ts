@@ -397,6 +397,18 @@ function handleGatewayEventUnsafe(host: GatewayHost, evt: GatewayEventFrame) {
     return;
   }
 
+  if (evt.event === "ollama:install:log") {
+    const line = (evt.payload as Record<string, unknown>)?.line;
+    if (typeof line === "string") {
+      host.ollamaLogLines = [...host.ollamaLogLines, line];
+    }
+    return;
+  }
+  if (evt.event === "ollama:install:done") {
+    host.ollamaInstalling = false;
+    void (host as unknown as { fetchOllamaStatus: () => Promise<void> }).fetchOllamaStatus();
+    return;
+  }
   if (evt.event === GATEWAY_EVENT_UPDATE_AVAILABLE) {
     const payload = evt.payload as GatewayUpdateAvailableEventPayload | undefined;
     host.updateAvailable = payload?.updateAvailable ?? null;

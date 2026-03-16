@@ -71,7 +71,9 @@ import {
 } from "./server/plugins-http.js";
 import type { ReadinessChecker } from "./server/readiness.js";
 import type { GatewayWsClient } from "./server/ws-types.js";
+import type { GatewayBroadcastFn } from "./server-broadcast.js";
 import { handleToolsInvokeHttpRequest } from "./tools-invoke-http.js";
+import { handleOllamaInstallRequest, handleOllamaStatusRequest } from "./ollama-http.js";
 
 type SubsystemLogger = ReturnType<typeof createSubsystemLogger>;
 
@@ -723,6 +725,7 @@ export function createGatewayHttpServer(opts: {
   openResponsesEnabled: boolean;
   openResponsesConfig?: import("../config/types.gateway.js").GatewayHttpResponsesConfig;
   strictTransportSecurityHeader?: string;
+  broadcast?: GatewayBroadcastFn;
   handleHooksRequest: HooksRequestHandler;
   handlePluginRequest?: PluginHttpRequestHandler;
   shouldEnforcePluginGatewayAuth?: (pathContext: PluginRoutePathContext) => boolean;
@@ -882,6 +885,17 @@ export function createGatewayHttpServer(opts: {
           rateLimiter,
         }),
       );
+
+      if (process.env.ULTRACLAW_OS === "1") {
+        requestStages.push({
+          name: "ollama-status",
+          run: () => handleOllamaStatusRequest(req, res),
+        });
+        requestStages.push({
+          name: "ollama-install",
+          run: () => handleOllamaInstallRequest(req, res, opts?.broadcast ?? (() => {})),
+        });
+      }
 
       if (controlUiEnabled) {
         requestStages.push({

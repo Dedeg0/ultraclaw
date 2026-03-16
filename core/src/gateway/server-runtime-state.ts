@@ -162,6 +162,7 @@ export async function createGatewayRuntimeState(params: {
       handleHooksRequest,
       handlePluginRequest,
       shouldEnforcePluginGatewayAuth,
+      broadcast,
       resolvedAuth: params.resolvedAuth,
       rateLimiter: params.rateLimiter,
       getReadiness: params.getReadiness,
@@ -199,6 +200,7 @@ export async function createGatewayRuntimeState(params: {
       wss,
       canvasHost,
       clients,
+      broadcast,
       resolvedAuth: params.resolvedAuth,
       rateLimiter: params.rateLimiter,
     });

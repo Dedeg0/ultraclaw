@@ -93,6 +93,7 @@ import { renderExecApprovalPrompt } from "./views/exec-approval.ts";
 import { renderGatewayUrlConfirmation } from "./views/gateway-url-confirmation.ts";
 import { renderLoginGate } from "./views/login-gate.ts";
 import { renderOverview } from "./views/overview.ts";
+import { renderOllamaSetup } from "./views/ollama-setup.ts";
 
 // Lazy-loaded view modules – deferred so the initial bundle stays small.
 // Each loader resolves once; subsequent calls return the cached module.
@@ -604,6 +605,17 @@ export function renderApp(state: AppViewState) {
             </section>`
         }
 
+        ${
+          state.tab === "overview" && !state.ollamaDismissed
+            ? renderOllamaSetup({
+                status: state.ollamaStatus,
+                logLines: state.ollamaLogLines,
+                installing: state.ollamaInstalling,
+                onInstall: () => state.triggerOllamaInstall?.(),
+                onDismiss: () => { state.ollamaDismissed = true; },
+              })
+            : nothing
+        }
         ${
           state.tab === "overview"
             ? renderOverview({

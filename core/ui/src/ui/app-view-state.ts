@@ -43,6 +43,10 @@ export type AppViewState = {
   loginShowGatewayPassword: boolean;
   tab: Tab;
   onboarding: boolean;
+  ollamaStatus: import("./views/ollama-setup.ts").OllamaStatus | null;
+  ollamaLogLines: string[];
+  ollamaInstalling: boolean;
+  ollamaDismissed: boolean;
   basePath: string;
   connected: boolean;
   theme: ThemeName;
